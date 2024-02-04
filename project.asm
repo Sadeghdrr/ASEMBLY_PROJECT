@@ -3,7 +3,7 @@
 section .data
     choose_mode db "Choose the mode:", 10, "1 -> non parallel matrix dot", 10, "2 -> parallel matrix dot", 10
                 db "3 -> non parallel matrix multiplication", 10, "4 -> parallel matrix multiplication", 10,
-                db "5 -> non parallel convolution", 10, "6 -> parallel convolution", 10, 0
+                db "5 -> parallel convolution", 10, 0
     enter_size db "Enter the matrixes sizes:", 10, 0
     enter_matrix1 db "Enter the matrix 1:", 10, 0
     enter_matrix2 db "Enter the matrix 2:", 10, 0
@@ -44,8 +44,8 @@ segment .text
         cmp rax, 2
         je second_mode          ; parallel_dot
 
-        ; cmp rax, 3
-        ; je non_parallel_mult
+        cmp rax, 3
+        je third_mode
 
         ; cmp rax, 4
         ; je parallel_mult
@@ -83,6 +83,16 @@ segment .text
             mov edi, [result]
             call print_float
             call print_nl
+            jmp end
+
+        third_mode:
+            call get_inputs
+            mov eax, [size1]
+            cmp eax, [size2]
+            jne invalid_main
+
+            call non_parallel_mult
+            call print_result_matrix
             jmp end
 
         invalid_main:
@@ -197,6 +207,53 @@ segment .text
 
             ret
 
+    print_result_matrix:
+        push rbp                    ; preLog
+        push rbx
+        push r12
+        push r13
+        push r14
+        push r15
+
+        sub rsp, 8
+
+
+        mov eax, [size1]
+        mov r12, rax
+        xor r13, r13
+        xor r14, r14
+        print_loop:
+            xor r14, r14
+            print_row:
+                mov r15, r13
+                imul r15, 32
+                mov rbx, r14
+                imul rbx, 4
+                add r15, rbx
+
+                mov edi, result_matrix[r15]
+                call print_float
+
+                inc r14
+                cmp r14, r12
+                jl print_row
+            
+            call print_nl
+            inc r13
+            cmp r13, r12
+            jl print_loop
+        
+        add rsp,8               ; stack alignment
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
+
     non_parallel_dot:
         push rbp                    ; preLog
         push rbx
@@ -222,6 +279,7 @@ segment .text
                 mov r15, rbx
                 add r15, r13
                 add r15, r14
+
                 movss xmm1, [matrix1 + r15]
                 movss xmm2, [matrix2 + r15]
                 mulss xmm1, xmm2
@@ -276,7 +334,7 @@ segment .text
             vpxor ymm2, ymm2
             vmovups [temp1], ymm1
             vmovups [temp2], ymm2
-            
+
             fill_ymms:
                 mov r15, r14
                 imul r15, 4
@@ -314,6 +372,74 @@ segment .text
             jl sum
 
         movd [result], xmm1
+
+        add rsp,8               ; stack alignment
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
+
+    non_parallel_mult:
+        push rbp                    ; preLog
+        push rbx
+        push r12
+        push r13
+        push r14
+        push r15
+
+        sub rsp, 8
+
+        mov r12, rax            ; r12 -> size,
+        xor rbp, rbp            ; rbp -> row index
+        xor rbx, rbx            ; rbx -> column index
+        xor r13, r13            ; r13 -> counter,
+                                ; r14 , r15 -> temp
+        row_change:
+            xor rbx, rbx
+            column_change:
+                pxor xmm3, xmm3
+                xor r13, r13
+                mult:
+                    mov r15, rbp
+                    imul r15, 32
+                    mov r14, r13
+                    imul r14, 4
+                    add r15, r14
+                    movss xmm1, matrix1[r15]
+
+                    mov r15, r13
+                    imul r15, 32
+                    mov r14, rbx
+                    imul r14, 4
+                    add r15, r14
+                    movss xmm2, matrix2[r15]
+
+                    mulss xmm1, xmm2
+                    addss xmm3, xmm1
+
+                    inc r13
+                    cmp r13, r12
+                    jl mult
+                
+                mov r15, rbp
+                imul r15, 32
+                mov r14, rbx
+                imul r14, 4
+                add r15, r14
+                movd result_matrix[r15], xmm3
+
+                inc rbx
+                cmp rbx, r12
+                jl column_change
+
+            inc rbp
+            cmp rbp, r12
+            jl row_change
 
         add rsp,8               ; stack alignment
 

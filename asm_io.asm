@@ -1,7 +1,7 @@
 segment .data
 print_int_format: db        "%ld ", 0
 
-print_float_format: db      "%lf ", 0
+print_float_format: db      "%6.3lf ", 0
 
 read_int_format: db         "%ld", 0
 
@@ -134,7 +134,7 @@ read_float:
     call scanf
 
     mov eax, dword [rsp]
-    
+
     add rsp, 8
 
     pop r15
