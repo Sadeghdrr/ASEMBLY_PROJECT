@@ -151,19 +151,6 @@ segment .text
             cmp r12, r15
             jl get_matrix_1
 
-
-        ; xor rbx, rbx
-        ; mov ebx, [size1]
-        ; imul rbx, rbx           ; size of matrix (counter)
-        ; xor r12, r12            ; reset index
-        ; get_matrix_1:
-        ;     call read_float
-        ;     mov [matrix1 + r12], eax
-        ;     add r12, 4
-        ;     dec rbx
-        ;     cmp rbx, 0
-        ;     jne get_matrix_1
-        
         mov rdi, enter_matrix2
         call printf
 
@@ -191,19 +178,6 @@ segment .text
             imul r15, 32
             cmp r12, r15
             jl get_matrix_2
-
-
-        ; xor rbx, rbx
-        ; mov ebx, [size2]
-        ; imul rbx, rbx           ; size of matrix (counter)
-        ; xor r12, r12            ; reset index
-        ; get_matrix_2:
-        ;     call read_float
-        ;     mov [matrix2 + r12], eax
-        ;     add r12, 4
-        ;     dec rbx
-        ;     cmp rbx, 0
-        ;     jne get_matrix_2
         
         jmp end_input
             
@@ -233,9 +207,10 @@ segment .text
         sub rsp, 8
 
         mov r12, rax            ; r12 -> size for dot,
-        ; rbx -> base index,
-        ; r13, r14 -> index,
-        ; r15 -> temp
+                                ; rbx -> base index,
+                                ; r13, r14 -> index,
+                                ; r15 -> temp
+                                
         xor r13, r13                    ; set the first_index to 0
         xor r14, r14                    ; set the second_index to 0
         pxor xmm0, xmm0                 ; set the result to 0
@@ -251,14 +226,6 @@ segment .text
                 mulss xmm1, xmm2
                 addss xmm0, xmm1
 
-                ; mov edi, [matrix2 + r15]
-                ; call print_float
-                ; call print_nl
-                ; mov rdi, r15
-                ; call print_int
-                ; call print_nl
-                ; call print_nl
-
                 add r14, 4
                 mov r15, r12
                 imul r15, 4 
@@ -268,40 +235,9 @@ segment .text
             add r13, 32
             mov r15, r12
             imul r15, 32
-
-            ; mov rdi, r12
-            ; call print_int
-            ; call print_nl
-            ; mov rdi, r13
-            ; call print_int
-            ; call print_nl
-            ; mov rdi, r14
-            ; call print_int
-            ; call print_nl
-            ; mov rdi, r15
-            ; call print_int
-            ; call print_nl
-            ; call print_nl
             cmp r13, r15
             jl dotting1
 
-
-        ; xor rdx, rdx
-        ; mov edx, [size1]
-        ; imul rdx, rdx                   ; size of marixes = n^2
-        ; mov rcx, rdx                    ; set the counter to n^2
-        ; xor rbx, rbx                    ; set the index to 0
-        ; pxor xmm0, xmm0                 ; set the result to 0
-
-        ; dotting:
-        ;     movss xmm1, matrix1[4 * rbx]
-        ;     movss xmm2, matrix2[4 * rbx]
-        ;     mulss xmm1, xmm2
-        ;     addss xmm0, xmm1
-
-        ;     inc rbx
-        ;     loop dotting
-            
         movd [result], xmm0
 
         add rsp,8               ; stack alignment
@@ -362,3 +298,23 @@ segment .text
         add rsp,8               ; stack alignment
 
         ret
+
+
+
+; mov edi, [matrix2 + r15]
+; call print_float
+; call print_nl
+
+; mov rdi, r12
+; call print_int
+; call print_nl
+; mov rdi, r13
+; call print_int
+; call print_nl
+; mov rdi, r14
+; call print_int
+; call print_nl
+; mov rdi, r15
+; call print_int
+; call print_nl
+; call print_nl
