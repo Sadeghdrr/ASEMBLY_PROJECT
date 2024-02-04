@@ -14,6 +14,8 @@ section .data
     matrix2 dd 64 dup(0)
     result_matrix dd 64 dup(0)
     result dd 0
+    temp1 dd 8 dup(0)
+    temp2 dd 8 dup(0)
     size1 dd 0
     size2 dd 0
 
@@ -76,7 +78,6 @@ segment .text
             jne invalid_main
 
             mov rbx, 0
-            mov r12, [size1]
             call parallel_dot
 
             mov edi, [result]
@@ -261,29 +262,69 @@ segment .text
 
         sub rsp, 8
 
-        ; r12 -> size fot dot, rbx -> base index, r13 -> index
-        mov rcx, r12                ; counter = size     
-        xor r13, r13                ; zero the index
-        vpxor ymm0, ymm0            ; zero the result
+        mov r12, rax            ; r12 -> size for dot,
+                                ; rbx -> base index,
+                                ; r13 -> counter,
+                                ; r14 -> index,
+                                ; r15 -> temp
+        xor r13, r13                ; zero the counter
+        vpxor ymm4, ymm4            ; zero the result
+
         dot:
-            vmovups ymm1, [matrix1 + rbx]
-            vmovups ymm2, [matrix2 + rbx]
-
+            xor r14, r14
+            vpxor ymm1, ymm1
+            vpxor ymm2, ymm2
+            vmovups [temp1], ymm1
+            vmovups [temp2], ymm2
             
-        movd [result], xmm0
-        jmp end_parallel_dot
+            fill_ymms:
+                mov r15, r14
+                imul r15, 4
 
-        end_parallel_dot:
-            add rsp,8               ; stack alignment
+                add r15, rbx
+                mov eax, [matrix1 + r15]
+                sub r15, rbx
+                mov [temp1 + r15], eax
+                add r15, rbx
+                mov eax, [matrix2 + r15]
+                sub r15, rbx
+                mov [temp2 + r15], eax
+                
+                inc r14
+                cmp r14, r12
+                jl fill_ymms
+            
+            vmovups ymm1, [temp1]
+            vmovups ymm2, [temp2]
+            vmulps ymm3, ymm1, ymm2 
+            vaddps ymm4, ymm4, ymm3
 
-            pop r15
-            pop r14
-            pop r13
-            pop r12
-            pop rbx
-            pop rbp
+            add rbx, 32
+            inc r13
+            cmp r13, r12
+            jl dot
 
-            ret
+        vmovups [temp1], ymm4
+        xor r12, r12                ; counter
+        pxor xmm1, xmm1             ; result
+        sum:                                ; get sum of ymm4 components
+            addss xmm1, [temp1 + 4 * r12]
+            inc r12
+            cmp r12, 8
+            jl sum
+
+        movd [result], xmm1
+
+        add rsp,8               ; stack alignment
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
 
     invalid:
         sub rsp, 8
