@@ -9,7 +9,8 @@ section .data
     enter_matrix2 db "Enter the matrix 2:", 10, 0
     result_frmt db "reslut = %d", 10, 0
     invalid_input_frmt db "invalid input", 10, 0
-    xmm5_value dd 1.0, 1.0, 1.0, 1.0
+    xmm5_packed_one dd 1.0, 1.0, 1.0, 1.0
+    matrix_row_size equ 32
 
     matrix1 dd 64 dup(0)
     matrix2 dd 64 dup(0)
@@ -167,9 +168,9 @@ segment .text
                 cmp r13, r15
                 jl in_get_matrix_1
             
-            add r12, 32
+            add r12, matrix_row_size
             mov r15, rbx
-            imul r15, 32
+            imul r15, matrix_row_size
             cmp r12, r15
             jl get_matrix_1
 
@@ -195,9 +196,9 @@ segment .text
                 cmp r13, r15
                 jl in_get_matrix_2
             
-            add r12, 32
+            add r12, matrix_row_size
             mov r15, rbx
-            imul r15, 32
+            imul r15, matrix_row_size
             cmp r12, r15
             jl get_matrix_2
         
@@ -237,7 +238,7 @@ segment .text
             xor r14, r14
             print_row:
                 mov r15, r13
-                imul r15, 32
+                imul r15, matrix_row_size
                 mov rbx, r14
                 imul rbx, 4
                 add r15, rbx
@@ -302,9 +303,9 @@ segment .text
                 cmp r14, r15
                 jl dotting2
 
-            add r13, 32
+            add r13, matrix_row_size
             mov r15, r12
-            imul r15, 32
+            imul r15, matrix_row_size
             cmp r13, r15
             jl dotting1
 
@@ -340,19 +341,19 @@ segment .text
 
         dot:
             mov r15, r13
-            imul r15, 32
+            imul r15, matrix_row_size
 
             vmovups ymm1, matrix1[rbx]
             vmovups ymm2, matrix2[r15]
             vmulps ymm3, ymm1, ymm2 
             vaddps ymm4, ymm4, ymm3
 
-            add rbx, 32
+            add rbx, matrix_row_size
             inc r13
             cmp r13, r12
             jl dot
 
-        movups  xmm5, [xmm5_value]
+        movups  xmm5, [xmm5_packed_one]
         vextractf128 xmm1, ymm4, 0
         vextractf128 xmm2, ymm4, 1
         dpps xmm1, xmm5, 0xF1
@@ -395,14 +396,14 @@ segment .text
                 xor r13, r13
                 mult:
                     mov r15, rbp
-                    imul r15, 32
+                    imul r15, matrix_row_size
                     mov r14, r13
                     imul r14, 4
                     add r15, r14
                     movss xmm1, matrix1[r15]
 
                     mov r15, r13
-                    imul r15, 32
+                    imul r15, matrix_row_size
                     mov r14, rbx
                     imul r14, 4
                     add r15, r14
@@ -416,7 +417,7 @@ segment .text
                     jl mult
                 
                 mov r15, rbp
-                imul r15, 32
+                imul r15, matrix_row_size
                 mov r14, rbx
                 imul r14, 4
                 add r15, r14
