@@ -362,18 +362,6 @@ segment .text
         movups [temp1], xmm1
         mov eax, [temp1]
         
-
-        ; vmovups [temp1], ymm4
-        ; xor r12, r12                ; counter
-        ; pxor xmm0, xmm0             ; result
-        ; sum:                        ; get sum of ymm4 components
-        ;     addss xmm0, [temp1 + 4 * r12]
-        ;     inc r12
-        ;     cmp r12, 8
-        ;     jl sum
-
-        ; movd eax, xmm0
-
         add rsp,8               ; stack alignment
 
         pop r15
