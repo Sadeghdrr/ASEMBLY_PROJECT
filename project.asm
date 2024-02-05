@@ -9,6 +9,7 @@ section .data
     enter_matrix2 db "Enter the matrix 2:", 10, 0
     result_frmt db "reslut = %d", 10, 0
     invalid_input_frmt db "invalid input", 10, 0
+    xmm5_value dd 1.0, 1.0, 1.0, 1.0
 
     matrix1 dd 64 dup(0)
     matrix2 dd 64 dup(0)
@@ -47,8 +48,8 @@ segment .text
         cmp rax, 3
         je third_mode
 
-        ; cmp rax, 4
-        ; je parallel_mult
+        cmp rax, 4
+        je forth_mode
 
         ; cmp rax, 5
         ; je convolution
@@ -66,7 +67,7 @@ segment .text
             mov rbx, 0
             call non_parallel_dot
 
-            mov edi, [result]
+            mov edi, eax
             call print_float
             call print_nl
             jmp end
@@ -80,7 +81,7 @@ segment .text
             mov rbx, 0
             call parallel_dot
 
-            mov edi, [result]
+            mov edi, eax
             call print_float
             call print_nl
             jmp end
@@ -92,6 +93,16 @@ segment .text
             jne invalid_main
 
             call non_parallel_mult
+            call print_result_matrix
+            jmp end
+
+        forth_mode:
+            call get_inputs
+            mov eax, [size1]
+            cmp eax, [size2]
+            jne invalid_main
+
+            call parallel_mult
             call print_result_matrix
             jmp end
 
@@ -297,7 +308,7 @@ segment .text
             cmp r13, r15
             jl dotting1
 
-        movd [result], xmm0
+        movd eax, xmm0
 
         add rsp,8               ; stack alignment
 
@@ -323,37 +334,16 @@ segment .text
         mov r12, rax            ; r12 -> size for dot,
                                 ; rbx -> base index,
                                 ; r13 -> counter,
-                                ; r14 -> index,
                                 ; r15 -> temp
         xor r13, r13                ; zero the counter
         vpxor ymm4, ymm4            ; zero the result
 
         dot:
-            xor r14, r14
-            vpxor ymm1, ymm1
-            vpxor ymm2, ymm2
-            vmovups [temp1], ymm1
-            vmovups [temp2], ymm2
+            mov r15, r13
+            imul r15, 32
 
-            fill_ymms:
-                mov r15, r14
-                imul r15, 4
-
-                add r15, rbx
-                mov eax, [matrix1 + r15]
-                sub r15, rbx
-                mov [temp1 + r15], eax
-                add r15, rbx
-                mov eax, [matrix2 + r15]
-                sub r15, rbx
-                mov [temp2 + r15], eax
-                
-                inc r14
-                cmp r14, r12
-                jl fill_ymms
-            
-            vmovups ymm1, [temp1]
-            vmovups ymm2, [temp2]
+            vmovups ymm1, matrix1[rbx]
+            vmovups ymm2, matrix2[r15]
             vmulps ymm3, ymm1, ymm2 
             vaddps ymm4, ymm4, ymm3
 
@@ -362,16 +352,27 @@ segment .text
             cmp r13, r12
             jl dot
 
-        vmovups [temp1], ymm4
-        xor r12, r12                ; counter
-        pxor xmm1, xmm1             ; result
-        sum:                                ; get sum of ymm4 components
-            addss xmm1, [temp1 + 4 * r12]
-            inc r12
-            cmp r12, 8
-            jl sum
+        movups  xmm5, [xmm5_value]
+        vextractf128 xmm1, ymm4, 0
+        vextractf128 xmm2, ymm4, 1
+        dpps xmm1, xmm5, 0xF1
+        dpps xmm2, xmm5, 0xF1
+        addps xmm1, xmm2
 
-        movd [result], xmm1
+        movups [temp1], xmm1
+        mov eax, [temp1]
+        
+
+        ; vmovups [temp1], ymm4
+        ; xor r12, r12                ; counter
+        ; pxor xmm0, xmm0             ; result
+        ; sum:                        ; get sum of ymm4 components
+        ;     addss xmm0, [temp1 + 4 * r12]
+        ;     inc r12
+        ;     cmp r12, 8
+        ;     jl sum
+
+        ; movd eax, xmm0
 
         add rsp,8               ; stack alignment
 
@@ -452,6 +453,30 @@ segment .text
 
         ret
 
+    parallel_mult:
+        push rbp                    ; preLog
+        push rbx
+        push r12
+        push r13
+        push r14
+        push r15
+
+        sub rsp, 8                  ; stack alignment
+
+
+        
+        add rsp, 8
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
+
+
     invalid:
         sub rsp, 8
 
@@ -483,5 +508,17 @@ segment .text
 ; call print_nl
 ; mov rdi, r15
 ; call print_int
+; call print_nl
+; call print_nl
+
+; movups [temp1], xmm2
+; mov edi, [temp1]
+; call print_float
+; mov edi, [temp1 + 4]
+; call print_float
+; mov edi, [temp1 + 8]
+; call print_float
+; mov edi, [temp1 + 12]
+; call print_float
 ; call print_nl
 ; call print_nl
