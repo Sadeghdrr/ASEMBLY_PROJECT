@@ -16,6 +16,7 @@ section .data
     matrix2 dd 64 dup(0)
     result_matrix dd 64 dup(0)
     result dd 0
+    result_size dd 0
     temp1 dd 8 dup(0)
     temp2 dd 8 dup(0)
     size1 dd 0
@@ -47,13 +48,13 @@ segment .text
         je second_mode          ; parallel_dot
 
         cmp rax, 3
-        je third_mode
+        je third_mode           ; non parallel multiplication
 
         cmp rax, 4
-        je forth_mode
+        je forth_mode           ; parallel multiplication
 
-        ; cmp rax, 5
-        ; je convolution
+        cmp rax, 5
+        je fifth_mode           ; convolution
 
         call invalid
         jmp end
@@ -105,6 +106,16 @@ segment .text
 
             call inverse_matrix_2
             call parallel_mult
+            call print_result_matrix
+            jmp end
+
+        fifth_mode:
+            call get_inputs
+            mov eax, [size1]
+            cmp eax, [size2]
+            jl invalid_main
+
+            call convolution
             call print_result_matrix
             jmp end
 
@@ -231,7 +242,7 @@ segment .text
         sub rsp, 8
 
 
-        mov eax, [size1]
+        mov eax, [result_size]
         mov r12, rax
         xor r13, r13
         xor r14, r14
@@ -383,6 +394,7 @@ segment .text
 
         sub rsp, 8
 
+        mov [result_size], eax
         mov r12, rax            ; r12 -> size,
         xor rbp, rbp            ; rbp -> row index
         xor rbx, rbx            ; rbx -> column index
@@ -450,8 +462,9 @@ segment .text
         push r15
 
         sub rsp, 8                  ; stack alignment
-        
+
         mov eax, [size1]
+        mov [result_size], eax
         mov r12, rax            ; r12 -> size,
         xor rbp, rbp            ; rbp -> row index
         xor rbx, rbx            ; rbx -> column index
@@ -505,6 +518,61 @@ segment .text
 
         ret
 
+    convolution:
+        push rbp                    ; preLog
+        push rbx
+        push r12
+        push r13
+        push r14
+        push r15
+
+        sub rsp, 8                  ; stack alignment
+      
+        mov eax, [size1]            ; size of out put = n - m + 1
+        mov ebx, [size2]
+        inc eax
+        sub eax, ebx
+
+        mov [result_size], eax
+        mov r12, rax                ; r12 -> size,
+        xor rbp, rbp                ; rbp -> row index
+        xor r13, r13                ; r13 -> column index
+                                    ; rbx -> index
+                                    ; r14 , r15 -> temp
+        conv_row:
+            xor r13, r13
+            conv_column:
+                mov r14, rbp
+                mov r15, r13
+                imul r14, matrix_row_size
+                imul r15, 4
+                add r15, r14
+
+                mov rbx, r15
+                mov rax, r12
+                call parallel_dot
+
+                mov result_matrix[r15], eax
+
+                inc r13
+                cmp r13, r12
+                jl conv_column
+            
+            inc rbp
+            cmp rbp, r12
+            jl conv_row
+            
+        add rsp, 8
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
+    
     inverse_matrix_2:
         push rbp                    ; preLog
         push rbx
