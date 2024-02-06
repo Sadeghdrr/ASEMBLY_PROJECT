@@ -103,6 +103,7 @@ segment .text
             cmp eax, [size2]
             jne invalid_main
 
+            call inverse_matrix_2
             call parallel_mult
             call print_result_matrix
             jmp end
@@ -359,9 +360,7 @@ segment .text
         dpps xmm1, xmm5, 0xF1
         dpps xmm2, xmm5, 0xF1
         addps xmm1, xmm2
-
-        movups [temp1], xmm1
-        mov eax, [temp1]
+        vextractps eax, xmm1, 0 ;
         
         add rsp,8               ; stack alignment
 
@@ -451,8 +450,109 @@ segment .text
         push r15
 
         sub rsp, 8                  ; stack alignment
+        
+        mov eax, [size1]
+        mov r12, rax            ; r12 -> size,
+        xor rbp, rbp            ; rbp -> row index
+        xor rbx, rbx            ; rbx -> column index
+                                ; r14 , r15 -> temp
+        vpxor ymm4, ymm4        ; ymm4 -> result
+                                ; ymm3 -> temp
+        movups  xmm5, [xmm5_packed_one]
 
+        row_loop:
+            xor rbx, rbx
+            column_loop:
+                mov r14, rbp
+                imul r14, matrix_row_size
+                mov r15, rbx
+                imul r15, matrix_row_size
 
+                vmovups ymm1, matrix1[r14]
+                vmovups ymm2, matrix2[r15]
+                vmulps ymm3, ymm1, ymm2
+
+                vextractf128 xmm1, ymm3, 0
+                vextractf128 xmm2, ymm3, 1
+                dpps xmm1, xmm5, 0xF1
+                dpps xmm2, xmm5, 0xF1
+                addps xmm1, xmm2
+                vextractps edx, xmm1, 0 ;
+
+                mov r14, rbp
+                imul r14, matrix_row_size
+                mov r15, rbx
+                imul r15, 4
+                add r15, r14
+                mov result_matrix[r15], edx
+
+                inc rbx
+                cmp rbx, r12
+                jl column_loop
+            
+            inc rbp
+            cmp rbp, r12
+            jl row_loop
+
+        add rsp, 8
+
+        pop r15
+        pop r14
+        pop r13
+        pop r12
+        pop rbx
+        pop rbp
+
+        ret
+
+    inverse_matrix_2:
+        push rbp                    ; preLog
+        push rbx
+        push r12
+        push r13
+        push r14
+        push r15
+
+        sub rsp, 8                  ; stack alignment
+
+        xor rcx, rcx
+        mov ecx, [size2]
+        mov r12, 0 ; row index
+
+        transpose_loop:
+            mov r13, r12 ; column index
+            inc r13
+
+            transpose_inner_loop:
+                mov r14, r12
+                mov r15, r13
+                imul r14, matrix_row_size
+                imul r15, 4
+                add r14, r15
+                mov ebx, matrix2[r14]
+
+                mov r14, r12
+                mov r15, r13
+                imul r14, 4
+                imul r15, matrix_row_size
+                add r14, r15
+                mov ebp, matrix2[r14]
+                mov matrix2[r14], ebx
+
+                mov r14, r12
+                mov r15, r13
+                imul r14, matrix_row_size
+                imul r15, 4
+                add r14, r15
+                mov matrix2[r14], ebp
+
+                inc r13
+                cmp r13, rcx
+                jl transpose_inner_loop
+
+            inc r12
+            cmp r12, rcx
+            jl transpose_loop
         
         add rsp, 8
 
@@ -464,6 +564,7 @@ segment .text
         pop rbp
 
         ret
+
 
 
     invalid:
@@ -510,4 +611,30 @@ segment .text
 ; mov edi, [temp1 + 12]
 ; call print_float
 ; call print_nl
+; call print_nl
+
+; mov eax, [size1]
+; mov r12, rax
+; xor r13, r13
+; xor r14, r14
+; print_loop2:
+;     xor r14, r14
+;     print_row2:
+;         mov r15, r13
+;         imul r15, matrix_row_size
+;         mov rbx, r14
+;         imul rbx, 4
+;         add r15, rbx
+
+;         mov edi, matrix2[r15]
+;         call print_float
+
+;         inc r14
+;         cmp r14, r12
+;         jl print_row2
+    
+;     call print_nl
+;     inc r13
+;     cmp r13, r12
+;     jl print_loop2
 ; call print_nl
