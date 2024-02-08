@@ -18,7 +18,7 @@ def mult_matrix():
     for i in range(size):
         matrix2[i] = list(map(float, input().split()))
 
-    loop_counter = 100000
+    loop_counter = 1000000
     result = [[0] * size for _ in range(size)]
 
     for o in range(loop_counter):
