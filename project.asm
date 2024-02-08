@@ -526,46 +526,7 @@ segment .text
             inc rbp
             cmp rbp, r12
             jl row_loop
-            
-        
-
-        ; movups  xmm5, [xmm5_packed_one]
-
-        ; ; row_loop:
-        ;     xor rbx, rbx
-        ;     mov r14, rbp
-        ;     imul r14, matrix_row_size
-        ;     vmovups ymm1, matrix1[r14]
-            
-        ;     column_loop:
-        ;         mov r15, rbx
-        ;         imul r15, matrix_row_size
-
-        ;         vmovups ymm2, matrix2[r15]
-        ;         vmulps ymm3, ymm1, ymm2
-
-        ;         vextractf128 xmm1, ymm3, 0
-        ;         vextractf128 xmm2, ymm3, 1
-        ;         dpps xmm1, xmm5, 0xF1
-        ;         dpps xmm2, xmm5, 0xF1
-        ;         addps xmm1, xmm2
-        ;         vextractps edx, xmm1, 0 ;
-
-        ;         mov r14, rbp
-        ;         imul r14, matrix_row_size
-        ;         mov r15, rbx
-        ;         imul r15, 4
-        ;         add r15, r14
-        ;         mov result_matrix[r15], edx
-
-        ;         inc rbx
-        ;         cmp rbx, r12
-        ;         jl column_loop
-            
-        ;     inc rbp
-        ;     cmp rbp, r12
-        ;     jl row_loop
-
+           
         add rsp, 8
 
         pop r15
