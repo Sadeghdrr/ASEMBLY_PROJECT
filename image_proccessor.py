@@ -6,32 +6,37 @@ filter = []
 filter_size = 0
 filter_str = ""
 final_matrix = []
+lines = []
 chunck_size = 0
 height = 0
 width = 0
 
 def image_proccess(image_path):
-    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size
-    image = np.array(Image.open(image_path).convert('L'))                                   # Open and convert image to grayscale
+    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size, lines
+    image = np.array(Image.open(image_path).convert('L'))
     height = image.shape[0]
     width = image.shape[1]
-    open('result.txt', 'w').close()
 
     for i in range(0, height, chunck_size):
         for j in range(0, width, chunck_size):
-            if i+8 < height and j+8 < width:
-                matrix = image[i:i+8, j:j+8]                                            # Extract 8x8 matrix
-                matrix_str = '\n'.join([' '.join(map(str, row)) for row in matrix])     # Convert matrix to string
-                input_file = open('input.txt', 'w')
-                input_file.write(f"5\n8 {filter_size}\n{matrix_str}\n{filter_str}\n")     # Write matrix to file
-                input_file.close()
-                run_project()
+            if i + 8 < height and j + 8 < width:
+                matrix = image[i:i + 8, j:j + 8]
+                matrix_str = '\n'.join([' '.join(map(str, row)) for row in matrix])
+
+                input_str = f"5\n8 {filter_size}\n{matrix_str}\n{filter_str}\n"
+
+                process = subprocess.Popen(['./project_no_extra_print'],
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            shell=True)
+                output, error = process.communicate(input=input_str.encode())
+
+                output_lines = output.decode().splitlines()
+                lines.extend(output_lines)
 
 def make_matrix():
-    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size
-
-    with open('result.txt', 'r') as result:
-        lines = result.readlines()
+    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size, lines
 
     for i in range(height // chunck_size):
         for j in range(chunck_size):
@@ -46,15 +51,11 @@ def make_matrix():
             
 
 def make_changed_image(image_path):
-    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size
+    global height, width, filter, filter_size, filter_str, final_matrix, chunck_size, lines
     
     matrix_array = np.array(final_matrix)
     image = Image.fromarray(matrix_array.astype('uint8'))
     image.save(image_dest_path)
-
-# Run the executable file "./project_no_extra_print" with input.txt and append output to result.txt
-def run_project():
-    subprocess.run(['./project_no_extra_print'], stdin=open('input.txt', 'r'), stdout=open('result.txt', 'a'), shell=True)
 
 if __name__ == "__main__":
     filter_size = int(input("Enter filter matrix size:\n"))
