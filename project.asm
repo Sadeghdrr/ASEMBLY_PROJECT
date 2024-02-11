@@ -7,11 +7,10 @@ section .data
     enter_size db "Enter the matrixes sizes:", 10, 0
     enter_matrix1 db "Enter the matrix 1:", 10, 0
     enter_matrix2 db "Enter the matrix 2:", 10, 0
-    result_frmt db "reslut = %d", 10, 0
     invalid_input_frmt db "invalid input", 10, 0
-    xmm5_packed_one dd 1.0, 1.0, 1.0, 1.0
     matrix_row_size equ 32
     matrix_half_row_size equ 16
+    loop_counter dq 1000000
 
     matrix1 dd 64 dup(0)
     matrix2 dd 64 dup(0)
@@ -95,7 +94,7 @@ segment .text
             cmp eax, [size2]                ; in square matrix multiplying, sizes must be equal
             jne invalid_main                ; terminate the program if the inputs were invalid
 
-            mov r13, 1000000                ; set a loop for getting comparable runtime
+            mov r13, loop_counter                ; set a loop for getting comparable runtime
             loop3:
                 call non_parallel_mult      ; call selected function
                 dec r13
@@ -113,7 +112,7 @@ segment .text
 
             call inverse_matrix_2           ; calculate the transposed of matrix2 and stored it in itself 
 
-            mov r13, 1000000                 ; set a loop for getting comparable runtime
+            mov r13, loop_counter                 ; set a loop for getting comparable runtime
             loop4:
                 call parallel_mult          ; call selected function
                 dec r13
@@ -129,7 +128,7 @@ segment .text
             cmp eax, [size2]                ; in convolution, filter matrix's size must be smaller than the main matrix
             jl invalid_main                 ; terminate the program if the inputs were invalid
 
-            mov r13, 100000                 ; set a loop for getting comparable runtime
+            mov r13, loop_counter                ; set a loop for getting comparable runtime
             loop5:
                 call convolution            ; call selected function
                 dec r13
@@ -374,30 +373,32 @@ segment .text
                                 ; r15 -> temp
 
         xor r13, r13                            ; zero the row counter
-        vpxor ymm4, ymm4                        ; zero the final result
+        pxor xmm9, xmm9                         ; zero the result
 
         dot:
             mov r15, r13
             imul r15, matrix_row_size           ; calculate the row offset address -> row counter * matrix_row_size
 
-            vmovups ymm1, matrix1[rbx]          ; load 8 bytes from bass offset of matrix 1 (main matrix) to ymm1
-            vmovups ymm2, matrix2[r15]          ; load a row (8 bytes) from matrix 2 to ymm2
-            vmulps ymm3, ymm1, ymm2             ; muliply each index of ymm1 and ymm2 in each other In parallel
-            vaddps ymm4, ymm4, ymm3             ; add the packed result to final result
+            movups xmm3, matrix2[r15]           ; get the first half of matrix2's row
+            add r15, matrix_half_row_size
+            movups xmm4, matrix2[r15]           ; get the second half of matrix2's row
 
-            add rbx, matrix_row_size            ; update the base offset (go to next row -> base offset += matrix_row_size)
+            movups xmm1, matrix1[rbx]           ; load first 4 bytes from base offset address
+            add rbx, matrix_half_row_size       ; base offset += 4 * 4 bytes (matrix_half_row_size)
+            movups xmm2, matrix1[rbx]           ; load second 4 bytes from base offset address
+            add rbx, matrix_half_row_size       ; base offset += 4 * 4 bytes (matrix_half_row_size)
+
+            dpps xmm3, xmm1, 0xF1               ; dot the first halfs
+            dpps xmm4, xmm2, 0xF1               ; dot the second halfs
+            addps xmm4, xmm3                    ; get sum of two halfs' dot
+            addss xmm9, xmm4                    ; add sum to total result
+            
             inc r13
-            cmp r13, r12                        ; compare the row counter with dot-size
+            cmp r13, r12                        ; compare with dot-size
             jl dot
-
-        movups  xmm5, [xmm5_packed_one]         ; initialize the xmm5 with [1, 1, 1, 1]
-        vextractf128 xmm1, ymm4, 0              ; store first half of final result in xmm1
-        vextractf128 xmm2, ymm4, 1              ; store second half of final result in xmm2
-        dpps xmm1, xmm5, 0xF1                   ; dot product the first half with [1, 1, 1, 1] to get the sum of its data and store the result in first 4byte of xmm1 
-        dpps xmm2, xmm5, 0xF1                   ; dot product the second half with [1, 1, 1, 1] to get the sum of its data and store the result in first 4byte of xmm2
-        addps xmm1, xmm2                        ; add the sum value of first half and second half
-        vextractps eax, xmm1, 0 ;               ; store the sum of all packed data within ymm4 (final result) into eax
         
+        movd eax, xmm9                          ; return result 
+    
         add rsp,8               ; stack alignment
 
         pop r15

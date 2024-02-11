@@ -51,7 +51,7 @@ def convolution():
     for i in range(size2):
         matrix2[i] = list(map(float, input().split()))
 
-    loop_counter = 100000
+    loop_counter = 1000000
     size3 = size1 + 1 - size2
     result = [[0] * size3 for _ in range(size3)]
     tmp_vec1 = [0] * (size2 * size2)
@@ -60,17 +60,10 @@ def convolution():
     for o in range(loop_counter):
         for i in range(size3):
             for j in range(size3):
-                for k in range(size2):
-                    for l in range(size2):
-                        tmp_vec1[size2 * k + l] = matrix1[i + k][j + l]
-                
-                for k in range(size2):
-                    for l in range(size2):
-                        tmp_vec2[k * size2 + l] = matrix2[k][l]
-                
                 temp = 0
-                for k in range(size2 * size2):
-                    temp += tmp_vec1[k] * tmp_vec2[k]
+                for k in range(size2):
+                    for l in range(size2):
+                        temp += matrix1[i + k][j + l] * matrix2[k][l]
                 result[i][j] = temp
 
     for i in range(size3):
