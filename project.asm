@@ -1,3 +1,11 @@
+; -----------------------------------------------------------------------------------------------------------
+; Sadegh Sargeran
+; 401106039
+; Project Assembly - Parallel and NonParallel programming comparing
+; Computer Structures
+; Prof. Jahangir
+; -----------------------------------------------------------------------------------------------------------
+
 %include "asm_io.inc"
 
 section .data
@@ -8,17 +16,15 @@ section .data
     enter_matrix1 db "Enter the matrix 1:", 10, 0
     enter_matrix2 db "Enter the matrix 2:", 10, 0
     invalid_input_frmt db "invalid input", 10, 0
+    matrix_size equ 64
     matrix_row_size equ 32
     matrix_half_row_size equ 16
     loop_counter dq 1000000
 
-    matrix1 dd 64 dup(0)
-    matrix2 dd 64 dup(0)
-    result_matrix dd 64 dup(0)
-    result dd 0
+    matrix1 dd matrix_size dup(0)
+    matrix2 dd matrix_size dup(0)
+    result_matrix dd matrix_size dup(0)
     result_size dd 0
-    temp1 dd 8 dup(0)
-    temp2 dd 8 dup(0)
     size1 dd 0
     size2 dd 0
 
@@ -40,7 +46,9 @@ segment .text
         mov rdi, choose_mode
         call printf
         call read_int                       ; choose which function is about to be used
-
+        cmp r10, 0                          ; input must be integer
+        je invalid_input                    ; terminate the program if the inputs were invalid
+        
         cmp rax, 1
         je first_mode                       ; non_parallel_dot
         
@@ -94,7 +102,7 @@ segment .text
             cmp eax, [size2]                ; in square matrix multiplying, sizes must be equal
             jne invalid_main                ; terminate the program if the inputs were invalid
 
-            mov r13, loop_counter                ; set a loop for getting comparable runtime
+            mov r13, [loop_counter]                ; set a loop for getting comparable runtime
             loop3:
                 call non_parallel_mult      ; call selected function
                 dec r13
@@ -112,7 +120,7 @@ segment .text
 
             call inverse_matrix_2           ; calculate the transposed of matrix2 and stored it in itself 
 
-            mov r13, loop_counter                 ; set a loop for getting comparable runtime
+            mov r13, [loop_counter]                 ; set a loop for getting comparable runtime
             loop4:
                 call parallel_mult          ; call selected function
                 dec r13
@@ -128,7 +136,7 @@ segment .text
             cmp eax, [size2]                ; in convolution, filter matrix's size must be smaller than the main matrix
             jl invalid_main                 ; terminate the program if the inputs were invalid
 
-            mov r13, loop_counter                ; set a loop for getting comparable runtime
+            mov r13, [loop_counter]                ; set a loop for getting comparable runtime
             loop5:
                 call convolution            ; call selected function
                 dec r13
@@ -163,11 +171,13 @@ segment .text
         push r15
 
         sub rsp, 8                          ; stack alignment
-    
+   
         mov rdi, enter_size                 ; print enter_size dialogue
         call printf
 
         call read_int                       ; read first matrix's size
+        cmp r10, 0                          ; input must be integer
+        je invalid_input                    ; terminate the program if the inputs were invalid
         cmp eax, 8                          ; sizes must be under 8
         jg invalid_input                    ; terminate the program if the inputs were invalid
         cmp eax, 1                          ; sizes must be above 0
@@ -175,6 +185,8 @@ segment .text
         mov [size1], eax                    ; store the size in memory
 
         call read_int                       ; read second matrix's size
+        cmp r10, 0                          ; input must be integer
+        je invalid_input                    ; terminate the program if the inputs were invalid
         cmp eax, 8                          ; sizes must be under 8
         jg invalid_input                    ; terminate the program if the inputs were invalid
         cmp eax, 1                          ; sizes must be above 0
@@ -193,6 +205,8 @@ segment .text
             xor r13, r13                    ; column index = 0
             in_get_matrix_1:
                 call read_float             ; get input from user
+                cmp r10, 0                  ; input must be integer
+                je invalid_input            ; terminate the program if the inputs were invalid
                 mov r15, r12
                 add r15, r13                ; calculate current index's offset -> r15 = matrix_row_size * row + column
                 mov [matrix1 + r15], eax    ; store input in current index
@@ -221,6 +235,8 @@ segment .text
             xor r13, r13
             in_get_matrix_2:
                 call read_float
+                cmp r10, 0      
+                je invalid_input
                 mov r15, r12
                 add r15, r13
                 mov [matrix2 + r15], eax

@@ -112,6 +112,7 @@ read_int:
     mov rax, 1 ; setting rax (al) to number of vector inputs
     call scanf
 
+    mov r10, rax
     mov rax, [rsp]
 
     add rsp, 8 ; clearing local variables from stack
@@ -133,6 +134,7 @@ read_float:
     mov rax, 1
     call scanf
 
+    mov r10, rax
     mov eax, dword [rsp]
 
     add rsp, 8
